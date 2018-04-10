@@ -8,3 +8,7 @@ You can install via the [Python Package Index](https://pypi.org/project/symbioni
 ```
 pip install symbionic
 ```
+Or upgrade to the latest version with
+```
+pip install symbionic --upgrade
+```
