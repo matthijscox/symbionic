@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy.signal import butter, filtfilt, savgol_filter, hilbert
 import re
+from symbionic._plotting import *
 
 
 def emg_filter_bandpass(x, order=4, sRate=650., cut=200., btype='low'):
@@ -91,6 +92,7 @@ class EmgData:
         df['sum'] = df[self.channel_names].sum(axis=1)
 
     def _label_patterns(self, gesture, shift=0.05):
+        self._calc_envelope(gesture)
         self._sum_channels(gesture, attr='envelope')
         envelope = self.envelope[gesture]
         data = self.data[gesture]
@@ -111,9 +113,9 @@ class EmgData:
         step_size = int(step * self.sample_rate)
         result = self.run_method_on_gestures('_get_training_samples_one_gesture',
                                              window_size=window_size, step_size=step_size)
-        X = np.hstack([result['X'] for r in result]).transpose()
-        y = np.hstack([result['y'] for r in result])
-        dt = np.hstack([result['dt'] for r in result])
+        X = np.hstack([r['X'] for r in result]).transpose()
+        y = np.hstack([r['y'] for r in result])
+        dt = np.hstack([r['dt'] for r in result])
         return {'X': X, 'y': y, 'dt': dt}
 
     def _get_training_samples_one_gesture(self, gesture, window_size=130, step_size=40):
