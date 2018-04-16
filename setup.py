@@ -1,14 +1,13 @@
 from setuptools import setup, find_packages
 
 setup(name='symbionic',
-      version='0.11',
+      version='0.13',
       description='Code base for the Symbionic project',
       url='http://github.com/storborg/funniest',
       author='Matthijs Cox',
       author_email='matthijs.cox@gmail.com',
       license='GNU General Public License v3 (GPLv3)',
       packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
-      #packages=['symbionic'],
       install_requires=[
         'numpy',
         'pandas',

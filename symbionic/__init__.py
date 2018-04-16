@@ -143,7 +143,7 @@ class EmgData:
             end_index = start_index + window_size - 1
             data_samples = [data.loc[start_index:end_index, c] for c in channel_names]  # slow
             X[:, step] = numpy.ndarray.flatten(numpy.array(data_samples))  # a bit slow
-            y[step] = labeled[end_index] * (g + 1)  # maybe check if there is any true?
+            y[step] = labeled[end_index] * g
             dt[step] = dist_to_nearest_pattern(end_index)/self.sample_rate
         return {'X': X, 'y': y, 'dt': dt}
 
