@@ -13,7 +13,7 @@ def set_axe_properties(ax,ylim=(-60,60)):
     ax.tick_params(length=0)
 
 
-def plot(emg_data,time=(0.2,4.8),figsize=(15,8),ylim=(-60,60),show_data=True,show_labels=True,show_envelope=False):
+def plot(emg_data,time=(0.2,4.8),figsize=(15,8),ylim=(-60,60),show_data=True,show_labels=True,show_envelope=False,data_color='#888888',envelope_color='#1D91C2',label_color='#D0F1FF'):
     gestures = emg_data.gestures_with_data()
     number_of_gestures = len(gestures)
     channel_names = emg_data.channel_names
@@ -32,16 +32,16 @@ def plot(emg_data,time=(0.2,4.8),figsize=(15,8),ylim=(-60,60),show_data=True,sho
             plot_time = data['time'][indices]
             if show_data:
                 emg_signal = data[channel_names[chan]][indices]
-                ax.plot(plot_time, emg_signal, color='#888888', lw=0.5)
+                ax.plot(plot_time, emg_signal, color=data_color, lw=0.5)
 
             if show_envelope:
                 envelope_signal = envelope[channel_names[chan]][indices]
-                ax.plot(plot_time,envelope_signal,color='#1D91C2',lw=1.5)
+                ax.plot(plot_time,envelope_signal,color=envelope_color,lw=1.5)
 
             if show_labels:
                 try:
                     labeled = np.array(data['labeled'][indices])
-                    ax.fill_between(plot_time, ylim[1]*labeled, y2=ylim[0], color='#D0F1FF', where=labeled)
+                    ax.fill_between(plot_time, ylim[1]*labeled, y2=ylim[0], color=label_color, where=labeled)
                 except:
                     pass
 

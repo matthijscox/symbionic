@@ -1,5 +1,6 @@
 import pandas
 import numpy
+from pandas import DataFrame
 from scipy.signal import butter, filtfilt, savgol_filter, hilbert
 import re
 from symbionic import _plotting
@@ -23,7 +24,7 @@ def calc_hilbert(signal):
 
 
 class EmgData:
-    def __init__(self, channels=8, sample_rate=650, gestures=6):
+    def __init__(self, channels: int = 8, sample_rate: int = 650, gestures: int = 6):
         self.channels = channels
         self.gestures = gestures
         self.sample_rate = sample_rate  # Hz
@@ -31,34 +32,48 @@ class EmgData:
         self.gesture_names = ['g' + str(i + 1) for i in range(self.gestures)]
         self.data = self._init_gesture_dict()
         self.has_data = dict([(g, False) for g in self.gesture_names])
-        self.data_path = self._init_gesture_dict()
         self.envelope = self._init_gesture_dict()
 
     def _init_gesture_dict(self):
-        return dict([(g, '') for g in self.gesture_names])  # gestures, called g1, g2, etc
+        return dict([(g, None) for g in self.gesture_names])  # gestures, called g1, g2, etc
 
     def gestures_with_data(self):
         return [x for x in self.gesture_names if self.has_data[x]]
 
     def load_training_data(self, path, gesture='g1'):
-        columns = self.channel_names
         # read in the binary data
         with open(path, 'rb') as f:
             bytesdata = f.read()
-        # initialize data frame
-        index = range(0, int(len(bytesdata) / self.channels))
-        df = pandas.DataFrame(index=index, columns=columns)
         # convert bytes to integer list
         values = [x for x in bytesdata]
-        # convert values to dataframe
+        self.store_emg_values_in_gesture(values,gesture)
+
+    def store_emg_values_in_gesture(self,values,gesture):
+        df = self.convert_emg_values_to_dataframe(values)
+        self.store_dataframe_in_gesture(gesture, df)
+
+    def convert_emg_values_to_dataframe(self,values,demean=True) -> DataFrame:
+        columns = self.channel_names
+        # initialize data frame
+        index = range(0, int(len(values) / self.channels))
+        df: DataFrame = pandas.DataFrame(index=index, columns=columns)
+        # convert values to a dataframe
+        # assuming the separate channels are stored intertwined
+        # so the values are: [point1channel1,point1channel2, ..., point1channelN, point2channel1, point2channel2 ...]
         for chan in range(0, self.channels):
             df[columns[chan]] = pandas.DataFrame(values[chan::self.channels])
-            df[columns[chan]] = df[columns[chan]] - df[columns[chan]].mean()  # remove the mean
+            if demean:
+                df[columns[chan]] = df[columns[chan]] - df[columns[chan]].mean()  # remove the mean
         # add a time column
         df['time'] = numpy.array(range(len(df))) / self.sample_rate
+        return df
+
+    def store_dataframe_in_gesture(self,gesture,df):
         self.data[gesture] = df
-        self.data_path[gesture] = path
         self.has_data[gesture] = True
+
+    def get_data_from_gesture(self, gesture):
+        return self.data[gesture]
 
     def run_method_on_gestures(self, fun_name, *args, **kwargs):
         result = []
@@ -79,7 +94,7 @@ class EmgData:
     def _calc_envelope(self, gesture):
         # convert raw signals to envelope (pretty fast)
         channel_names = self.channel_names
-        envelope = self.data[gesture].copy()
+        envelope: DataFrame = self.data[gesture].copy()
         for chan in range(self.channels):
             emg_signal = envelope[channel_names[chan]]
             filtered_emg_signal = emg_filter_bandpass(emg_signal, cut=200)  # lowpass filter
@@ -94,8 +109,8 @@ class EmgData:
     def _label_patterns(self, gesture, shift=0.05):
         self._calc_envelope(gesture)
         self._sum_channels(gesture, attr='envelope')
-        envelope = self.envelope[gesture]
-        data = self.data[gesture]
+        envelope: DataFrame = self.envelope[gesture]
+        data: DataFrame = self.data[gesture]
         envelope_signal = envelope['sum']
         filtered_signal = emg_filter_bandpass(envelope_signal, cut=3)
         labeled = filtered_signal > max(filtered_signal) / 3.5
@@ -120,7 +135,7 @@ class EmgData:
 
     def _get_training_samples_one_gesture(self, gesture, window_size=130, step_size=40):
         ''' window and step in number of samples'''
-        data = self.data[gesture]
+        data: DataFrame = self.data[gesture]
         g = int(re.findall(r'\d+$', gesture)[0])  # find the trailing digits of the gesture name
         channel_names = self.channel_names
         labeled = data['labeled']
@@ -147,5 +162,5 @@ class EmgData:
             dt[step] = dist_to_nearest_pattern(end_index)/self.sample_rate
         return {'X': X, 'y': y, 'dt': dt}
 
-    def plot(self):
-        return _plotting.plot(self)
+    def plot(self,*args,**kwargs):
+        return _plotting.plot(self,*args,**kwargs)
