@@ -23,6 +23,10 @@ def calc_hilbert(signal):
     return [amplitude_envelope, instantaneous_frequency]
 
 
+def plot_confusion_matrix(*args, **kwargs):
+    return _plotting.plot_confusion_matrix( *args, **kwargs)
+
+
 class EmgData:
     def __init__(self, channels: int = 8, sample_rate: int = 650, gestures: int = 6):
         self.channels = channels
@@ -40,7 +44,15 @@ class EmgData:
     def gestures_with_data(self):
         return [x for x in self.gesture_names if self.has_data[x]]
 
+    def load(self,path,gesture='g1'):
+        # we only support hex data for now
+        self.load_hex_data(path,gesture)
+
     def load_training_data(self, path, gesture='g1'):
+        # deprecated
+        self.load(path,gesture)
+
+    def load_hex_data(self, path, gesture='g1'):
         # read in the binary data
         with open(path, 'rb') as f:
             bytesdata = f.read()
