@@ -44,6 +44,11 @@ class EmgData:
     def gestures_with_data(self):
         return [x for x in self.gesture_names if self.has_data[x]]
 
+    def get_gesture_index(self,gesture):
+        # ugly, find the trailing digits of the gesture name
+        index = int(re.findall(r'\d+$', gesture)[0])
+        return index
+
     def load(self,path,gesture='g1'):
         # we only support hex data for now
         self.load_hex_data(path,gesture)
@@ -140,7 +145,7 @@ class EmgData:
         step_size = int(step * self.sample_rate)
         result = self.run_method_on_gestures('_get_training_samples_one_gesture',
                                              window_size=window_size, step_size=step_size)
-        X = numpy.hstack([r['X'] for r in result]).transpose()
+        X = numpy.vstack([r['X'] for r in result])
         y = numpy.hstack([r['y'] for r in result])
         dt = numpy.hstack([r['dt'] for r in result])
         return {'X': X, 'y': y, 'dt': dt}
@@ -148,7 +153,7 @@ class EmgData:
     def _get_training_samples_one_gesture(self, gesture, window_size=130, step_size=40):
         ''' window and step in number of samples'''
         data: DataFrame = self.data[gesture]
-        g = int(re.findall(r'\d+$', gesture)[0])  # find the trailing digits of the gesture name
+        g = self.get_gesture_index(gesture)
         channel_names = self.channel_names
         labeled = data['labeled']
         # find the distance to the nearest pattern
@@ -159,19 +164,14 @@ class EmgData:
             nearest_index = (numpy.abs(start_of_patterns - index)).argmin()
             return index - start_of_patterns[nearest_index]
 
-        # create training samples
+        # create sliding windowed samples
+        # used 2nd answer from here: https://stackoverflow.com/questions/15722324/sliding-window-in-numpy
         steps = int((len(data) - window_size) / step_size)
-        # initialize
-        X = numpy.zeros((window_size * len(channel_names), steps))
-        y = numpy.zeros(steps)
-        dt = numpy.zeros(steps)
-        for step in range(steps):
-            start_index = step * step_size
-            end_index = start_index + window_size - 1
-            data_samples = [data.loc[start_index:end_index, c] for c in channel_names]  # slow
-            X[:, step] = numpy.ndarray.flatten(numpy.array(data_samples))  # a bit slow
-            y[step] = labeled[end_index] * g
-            dt[step] = dist_to_nearest_pattern(end_index)/self.sample_rate
+        window_indexer = numpy.arange(window_size)[None, :] + step_size * numpy.arange(steps)[:, None]
+        indexer_end_of_window = window_indexer[:, -1]
+        X = numpy.stack([numpy.array(data.loc[:, c])[window_indexer] for c in channel_names], axis=2)
+        y = numpy.array(labeled[indexer_end_of_window] * g)
+        dt = [dist_to_nearest_pattern(end_of_window) / self.sample_rate for end_of_window in indexer_end_of_window]
         return {'X': X, 'y': y, 'dt': dt}
 
     def plot(self,*args,**kwargs):
