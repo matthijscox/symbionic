@@ -27,6 +27,12 @@ def plot_confusion_matrix(*args, **kwargs):
     return _plotting.plot_confusion_matrix( *args, **kwargs)
 
 
+def calc_envelope(signal, freq=200, smooth=21):
+    filtered_emg_signal = emg_filter_bandpass(signal, cut=freq)  # lowpass filter
+    h = calc_hilbert(filtered_emg_signal)  # hilbert transform
+    return savgol_filter(h[0], smooth, 1)  # extra smoothing
+
+
 class EmgData:
     def __init__(self, channels: int = 8, sample_rate: int = 650, gestures: int = 6):
         self.channels = channels
@@ -114,9 +120,7 @@ class EmgData:
         envelope: DataFrame = self.data[gesture].copy()
         for chan in range(self.channels):
             emg_signal = envelope[channel_names[chan]]
-            filtered_emg_signal = emg_filter_bandpass(emg_signal, cut=200)  # lowpass filter
-            h = calc_hilbert(filtered_emg_signal)  # hilter transform
-            envelope[channel_names[chan]] = savgol_filter(h[0], 21, 1)  # extra smoothing
+            envelope[channel_names[chan]] = calc_envelope(emg_signal)
         self.envelope[gesture] = envelope
 
     def _sum_channels(self, gesture, attr='envelope'):

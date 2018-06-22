@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='symbionic',
-      version='0.13',
+      version='0.2',
       description='Code base for the Symbionic project',
       url='http://github.com/storborg/funniest',
       author='Matthijs Cox',

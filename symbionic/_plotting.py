@@ -48,7 +48,7 @@ def plot(emg_data, time=(0.2,4.8), figsize=(15,8), ylim=(-60,60), show_data=True
                     pass
 
             # setting axe properties
-            set_axe_properties(ax)
+            set_axe_properties(ax, ylim=ylim)
             if g == 0:
                 ax.set_ylabel('ch{0}'.format(chan+1))
             else:
