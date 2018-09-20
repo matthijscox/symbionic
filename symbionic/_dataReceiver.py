@@ -6,11 +6,12 @@ from itertools import chain
 import struct
 import random
 import time
+import symbionic
 
 
 class GFDataReceiverSocket:
 
-    def __init__(self, data_handler=None,stub=False):
+    def __init__(self, data_handler=None, stub=False):
         self.connected = False
         self.client_socket = None
         if data_handler is None:
@@ -21,6 +22,12 @@ class GFDataReceiverSocket:
 
     def start(self):
         self.internalThread.start()
+
+    def stop(self):
+        self.internalThread.do_run = False
+        self.internalThread.join()
+        self.client_socket.close()
+        self.connected = False
 
     def run(self):
         while getattr(self.internalThread, "do_run", True):
@@ -47,15 +54,9 @@ class GFDataReceiverSocket:
             second_byte = self.client_socket.recv(1)
             data_type = int(ord(second_byte))
             data_length = (first_byte[0] - 1)
-            self.HandleData(data_type, data_length)
+            self.handle_data(data_type, data_length)
 
-    def stop(self):
-        self.internalThread.do_run = False
-        self.internalThread.join()
-        self.client_socket.close()
-        self.connected = False
-
-    def HandleData(self, dataType, dataLength):
+    def handle_data(self, dataType, dataLength):
         if dataType == 1:
             self.HandleOrientationData(dataLength)
         elif dataType == 2:
@@ -100,61 +101,69 @@ class GFDataHandler:
         self.GestureData = data
 
     def HandleExtendedDeviceData(self, dataType, data):
-        buffered_data = data[2:]  # removes first 2 bytes (assuming they are useless)
+        buffered_data = data[2:]  # removes first 2 bytes (assuming they are context info)
         self.ExtendedDeviceData.append(buffered_data)
         self.totalPackages += 1
 
-    def getLatestExtendedDeviceData(self):
-        if self.sentPackages is not self.totalPackages:
+    def get_latest_extended_device_data(self, packages=None):
+        if packages is not None:
+            self.latestPackages = self.ExtendedDeviceData[-packages:]
+        elif self.sentPackages is not self.totalPackages:
+            # get the last packages that have not yet been sent
             self.latestPackages = self.ExtendedDeviceData[self.sentPackages:]
         else:
             self.latestPackages = []
         self.sentPackages = self.totalPackages
         return self.latestPackages
 
-    def sendChannelData(self):
-        latestArray = self.latestPackages
-        channel8 = list(chain.from_iterable(latestArray))
-        return channel8[0::8]
-        #latestArray = list(chain.from_iterable(latestArray))
-        #return latestArray[0::8]
-
-#task last time:
-#convert channel8 into a n by 8 numpy array.
-#As example, see code symbionic hex to bi
+    def get_latest_emg_data(self, packages=None, channels=8, demean=True):
+        latest_array = self.get_latest_extended_device_data(packages)
+        emg_values = list(chain.from_iterable(latest_array))
+        samples = int(len(emg_values) / channels)
+        emg_data = np.zeros(shape=(samples, channels))
+        for chan in range(0, channels):
+            emg_data[:, chan] = np.array(emg_values[chan::channels])
+        if demean:
+            mean = emg_data.mean(axis=1)
+            emg_data = emg_data - mean[:, np.newaxis]
+        return emg_data
 
 
 def get_random_bytes(data_length):
     return bytearray(random.getrandbits(8) for _ in range(data_length))
 
 
-class ClientSocketStub():
+class ClientSocketStub:
 
     def __init__(self):
-        self.index = 0
-        self.start_time = time.time()
-        self.data_delay = 0.3 # the time delay before a data package is being sent
-        self.data = {0: bytearray([0]),
-                     1: bytearray([131]),
-                     2: chr(3),
-                     3: chr(8),
-                     4: get_random_bytes(130)
-                     }
+        self._index = 0
+        self._start_time = time.time()
+        # pre-programmed data packages:
+        self._data = {0: bytearray([0]),
+                      1: bytearray([132]),  # data length
+                      2: chr(3),  # data type
+                      3: chr(8),  # number of channels?
+                      4: get_random_bytes   # ExtendedDeviceData package function
+                      }
+        # the time delay before a data package is being sent
+        self.data_delay = 0.3
 
     def next(self):
-        passed_time = time.time() - self.start_time
+        passed_time = time.time() - self._start_time
         if passed_time > self.data_delay:
-            self.index += 1
-        if self.index == 5:
+            self._index += 1
+        if self._index == 5:
             # reset
-            self.start_time = time.time()
-            self.index = 0
+            self._start_time = time.time()
+            self._index = 0
 
     def close(self):
         return True
 
     def recv(self,data_length):
         # very simple stub, doesn't even use the data_length input
-        data = self.data[self.index]
+        data = self._data[self._index]
+        if callable(data):
+            data = data(data_length)
         self.next()
         return data

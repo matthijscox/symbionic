@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 
 setup(name='symbionic',
-      version='0.20',
+      version='0.21',
       description='Code base for the Symbionic project',
-      url='http://github.com/storborg/funniest',
+      url='https://github.com/matthijscox/symbionic',
       author='Matthijs Cox',
       author_email='matthijs.cox@gmail.com',
       license='GNU General Public License v3 (GPLv3)',

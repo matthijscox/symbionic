@@ -12,10 +12,7 @@ def raw_emg_data_sample(channels=8):
 
 @pytest.fixture
 def data_directory():
-    file_dir = os.path.dirname(__file__)
-    parent_dir = os.path.dirname(file_dir)
-    parent_dir = os.path.dirname(parent_dir)
-    return parent_dir + '/data/'
+    return symbionic.example_data_directory()
 
 
 @pytest.fixture
