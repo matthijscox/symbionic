@@ -26,13 +26,10 @@ def test_socket_stub():
 def test_receiver_stub():
     # set up the receiver with a stubbed socket
     dataHandler = symbionic.GFDataHandler()
-    receiver = symbionic.GFDataReceiverSocket(dataHandler)
-    receiver.connected = True
-    stub = symbionic._dataReceiver.ClientSocketStub()
-    stub.data_delay = 0.05
-    receiver.client_socket = stub
+    receiver = symbionic.GFDataReceiverSocket(dataHandler,stub=True)
     # get data on the fly
     receiver.start()
+    receiver.client_socket.data_delay = 0.05
     time.sleep(0.17)
     device_data = dataHandler.getLatestExtendedDeviceData()
     assert len(device_data) == 3, f"expected 3 data packages, found only {len(device_data)}"

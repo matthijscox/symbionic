@@ -10,13 +10,14 @@ import time
 
 class GFDataReceiverSocket:
 
-    def __init__(self, data_handler=None):
+    def __init__(self, data_handler=None,stub=False):
         self.connected = False
         self.client_socket = None
         if data_handler is None:
             data_handler = GFDataHandler()
         self.dataHandler = data_handler
         self.internalThread = threading.Thread(target=self.run)
+        self.use_stub = stub
 
     def start(self):
         self.internalThread.start()
@@ -25,21 +26,28 @@ class GFDataReceiverSocket:
         while getattr(self.internalThread, "do_run", True):
             try:
                 if not self.connected:
-                    self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-                    self.client_socket.connect(('localhost', 12345))
+                    self.connect_to_socket()
                     self.connected = True
                 else:
-                    data = self.client_socket.recv(1)
-                    if data[0] is not 0:
-                        data2 = self.client_socket.recv(1)
-                        dataType = int(ord(data2))
-                        # print(f"dataType = {dataType}")
-                        dataLength = (data[0] - 1)
-                        # print(f"dataLength = {dataLength}")
-                        self.HandleData(dataType, dataLength)
+                    self.receive_data()
             except socket.error:
                 self.connected = False
+
+    def connect_to_socket(self):
+        if self.use_stub:
+            self.client_socket = ClientSocketStub()
+        else:
+            self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            self.client_socket.connect(('localhost', 12345))
+
+    def receive_data(self):
+        first_byte = self.client_socket.recv(1)
+        if first_byte[0] is not 0:
+            second_byte = self.client_socket.recv(1)
+            data_type = int(ord(second_byte))
+            data_length = (first_byte[0] - 1)
+            self.HandleData(data_type, data_length)
 
     def stop(self):
         self.internalThread.do_run = False
