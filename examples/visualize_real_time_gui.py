@@ -5,6 +5,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 import matplotlib.animation as animation
 import symbionic
 import time
+import random
 
 # create figure for inside the gui
 fig = Figure(figsize=(7, 6))
@@ -13,7 +14,7 @@ fig = Figure(figsize=(7, 6))
 # use a stubbed receiver
 receiver = symbionic.GFDataReceiverSocket(stub=True)
 number_of_packages = 15
-
+gestures = []
 
 def start_data_receiver():
     # start the receiver
@@ -24,7 +25,29 @@ def start_data_receiver():
 
 def stop_data_receiver():
     receiver.stop()
-    print(len(receiver.dataHandler.ExtendedDeviceData))
+    #print(len(receiver.dataHandler.ExtendedDeviceData))
+
+
+class GestureDisplayer:
+    def __init__(self):
+        self.gestures = []
+        self.prediction = 0
+
+    def add(self,gesture):
+        self.gestures.append(gesture)
+
+    def show_prediction(self):
+        for g in self.gestures:
+            g.configure(style='Disabled.Label')
+        self.gestures[self.prediction].configure(style='Enabled.Label')
+
+
+gesture_displayer = GestureDisplayer()
+
+
+def update_prediction():
+    gesture_displayer.prediction = random.randrange(6)
+    gesture_displayer.show_prediction()
 
 
 def init_plot(channels=8):
@@ -54,6 +77,7 @@ def animate(draw=False):
             ax[chan].set_xlim(0, data_size-1)
             lines[chan].set_xdata(x_data)
             lines[chan].set_ydata(data[:, chan])
+        update_prediction()
     return line,  # matplotlib.animation requires an iterable (like a tuple) as output
 
 
@@ -63,31 +87,41 @@ root.title("Symbionic GUI")
 root.rowconfigure(0, weight=1)
 root.columnconfigure(0, weight=1)
 
-mainframe = ttk.Frame(root, padding="3 3 12 12")
-mainframe.grid(column=0, row=0, sticky=(N,S,E,W))
+gui_style = ttk.Style()
+gui_style.configure('My.TFrame', background='white')
+gui_style.configure('Enabled.Label', foreground="red")
+gui_style.configure('Disabled.Label', foreground="black")
 
-# add label and buttons
-ttk.Label(mainframe, text="Nice GUI").grid(column=1, row=0, sticky=N)
-ttk.Button(mainframe, text="Start", command=start_data_receiver).grid(column=0, row=2, sticky=W)
-ttk.Button(mainframe, text="Stop", command=stop_data_receiver).grid(column=2, row=2, sticky=W)
+top_frame = ttk.Frame(root, padding="3 3 12 12", style='My.TFrame')
+middle_frame = ttk.Frame(root, padding="3 3 12 12", style='My.TFrame')
+lower_frame = ttk.Frame(root, padding="3 3 12 12", style='My.TFrame')
+top_frame.pack(fill="both", expand=True)
+middle_frame.pack(fill="both", expand=True)
+lower_frame.pack(fill="both", expand=True)
+
+# add top label
+ttk.Label(top_frame, text="Nice GUI", background='white').pack(anchor='center')
 
 # add a figure
+middle_left_frame = ttk.Frame(middle_frame, style='My.TFrame')
+middle_left_frame.pack(side=LEFT)
 init_plot()
-
-canvas = FigureCanvasTkAgg(fig, master=mainframe)
+canvas = FigureCanvasTkAgg(fig, master=middle_left_frame)
 canvas.draw()
-canvas.get_tk_widget().grid(column=1, row=1)
+canvas.get_tk_widget().pack()
 
-# make everything stick
-for x in range(3):
-    mainframe.columnconfigure(x, weight=1)
-for y in range(3):
-    mainframe.rowconfigure(y, weight=1)
+middle_right_frame = ttk.Frame(middle_frame, style='My.TFrame')
+middle_right_frame.pack(side=LEFT, expand=True)
 
-# add some padding
-for child in mainframe.winfo_children():
-    child.grid_configure(padx=5, pady=5)
+for g in range(6):
+    gesture = ttk.Label(middle_right_frame, text=f"Gesture {g+1}", style='Disabled.Label')
+    gesture.pack(pady=5)
+    gesture_displayer.add(gesture)
+
+# add buttons
+ttk.Button(lower_frame, text="Start", command=start_data_receiver).pack(side=RIGHT, padx=5)
+ttk.Button(lower_frame, text="Stop", command=stop_data_receiver).pack(side=RIGHT, padx=5)
 
 # get going
-ani = animation.FuncAnimation(fig, animate, interval=100)
+ani = animation.FuncAnimation(fig, animate, interval=300)
 root.mainloop()
