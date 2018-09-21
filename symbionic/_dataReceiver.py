@@ -17,15 +17,21 @@ class GFDataReceiverSocket:
         if data_handler is None:
             data_handler = GFDataHandler()
         self.dataHandler = data_handler
-        self.internalThread = threading.Thread(target=self.run)
+        self.internalThread = None
         self.use_stub = stub
 
     def start(self):
-        self.internalThread.start()
+        if self.internalThread is not None and self.internalThread.is_alive():
+            # enforce the do_run flag to true
+            self.internalThread.do_run = True
+        else:
+            # create a new thread
+            self.internalThread = threading.Thread(target=self.run)
+            self.internalThread.start()
 
     def stop(self):
+        # don't stop the thread itself, just set the flag to false
         self.internalThread.do_run = False
-        self.internalThread.join()
         self.client_socket.close()
         self.connected = False
 
@@ -87,12 +93,14 @@ class GFDataReceiverSocket:
 
 
 class GFDataHandler:
-    OrientationData = []
-    GestureData = []
-    ExtendedDeviceData = []
-    totalPackages = 0
-    sentPackages = 0
-    latestPackages = []
+
+    def __init__(self):
+        self.OrientationData = []
+        self.GestureData = []
+        self.ExtendedDeviceData = []
+        self.totalPackages = 0
+        self.sentPackages = 0
+        self.latestPackages = []
 
     def HandleOrientationData(self, f1,f2,f3,f4):
         self.OrientationData = [f1,f2,f3,f4]
@@ -146,7 +154,7 @@ class ClientSocketStub:
                       4: get_random_bytes   # ExtendedDeviceData package function
                       }
         # the time delay before a data package is being sent
-        self.data_delay = 0.3
+        self.data_delay = 0.03
 
     def next(self):
         passed_time = time.time() - self._start_time

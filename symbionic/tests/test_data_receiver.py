@@ -54,3 +54,17 @@ def test_receiver_stub():
     expected_shape = (int(128*2/8), 8)
     assert emg_data.shape == expected_shape, f"Shape should be {expected_shape}, but it was {emg_data.shape}"
     # test retrieval of too much data
+
+
+def test_receiver_restart():
+    receiver = get_running_receiver_stub()
+    receiver.stop()
+    assert not receiver.connected, "Receiver should not have been running"
+    assert not receiver.internalThread.do_run, "Thread should have not been running"
+    receiver.start()
+    time.sleep(0.05)
+    assert receiver.connected, "Receiver should have been running"
+    assert receiver.internalThread.do_run, "Thread should have been running"
+    receiver.stop()
+    assert not receiver.connected, "Receiver should not have been running"
+    assert not receiver.internalThread.do_run, "Thread should have not been running"

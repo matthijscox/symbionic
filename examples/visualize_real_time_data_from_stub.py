@@ -5,14 +5,14 @@ import time
 from matplotlib.pyplot import imshow, pause
 
 # number of packages to show
-number_of_packages = 5
+number_of_packages = 15
 
 # start the receiver
 receiver = symbionic.GFDataReceiverSocket(stub=True)
 receiver.start()
 
 # wait until we have enough data
-time.sleep(2)
+time.sleep(number_of_packages*0.03+0.2)
 
 # collect a first data package
 data = receiver.dataHandler.get_latest_emg_data(number_of_packages)
@@ -62,7 +62,7 @@ animate(draw=True)
 
 while True:
     animate(draw=True)
-    pause(.35)
+    pause(.05)
 
 
 
