@@ -18,6 +18,7 @@ class EmgData:
         self.data = self._init_gesture_dict()
         self.has_data = dict([(g, False) for g in self.gesture_names])
         self.envelope = self._init_gesture_dict()
+        self.demean_data = True
 
     def _init_gesture_dict(self):
         return dict([(g, None) for g in self.gesture_names])  # gestures, called g1, g2, etc
@@ -50,7 +51,7 @@ class EmgData:
         df = self.convert_emg_values_to_dataframe(values)
         self.store_dataframe_in_gesture(gesture, df)
 
-    def convert_emg_values_to_dataframe(self,values,demean=True) -> DataFrame:
+    def convert_emg_values_to_dataframe(self,values) -> DataFrame:
         columns = self.channel_names
         # initialize data frame
         index = range(0, int(len(values) / self.channels))
@@ -60,7 +61,7 @@ class EmgData:
         # so the values are: [point1channel1,point1channel2, ..., point1channelN, point2channel1, point2channel2 ...]
         for chan in range(0, self.channels):
             df[columns[chan]] = pandas.DataFrame(values[chan::self.channels])
-            if demean:
+            if self.demean_data:
                 df[columns[chan]] = df[columns[chan]] - df[columns[chan]].mean()  # remove the mean
         # add a time column
         df['time'] = numpy.array(range(len(df))) / self.sample_rate

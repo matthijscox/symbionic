@@ -126,9 +126,12 @@ class GFDataHandler:
         self.sentPackages = self.totalPackages
         return self.latestPackages
 
+    def chain_all_packages(self,input):
+        return list(chain.from_iterable(input))
+
     def get_latest_emg_data(self, packages=None, channels=8, demean=True):
         latest_array = self.get_latest_extended_device_data(packages)
-        emg_values = list(chain.from_iterable(latest_array))
+        emg_values = self.chain_all_packages(latest_array)
         samples = int(len(emg_values) / channels)
         emg_data = np.zeros(shape=(samples, channels))
         for chan in range(0, channels):

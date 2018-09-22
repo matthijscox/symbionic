@@ -1,11 +1,17 @@
 from tkinter import *
 from tkinter import ttk
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.animation as animation
 import symbionic
 import time
 import random
+import numpy as np
+from keras.models import load_model
+from tkinter.filedialog import askopenfilename, asksaveasfilename
+import os
+
+application_directory = os.path.dirname(os.path.abspath(__file__))
 
 # create figure for inside the gui
 fig = Figure(figsize=(7, 6))
@@ -31,12 +37,17 @@ def stop_data_receiver():
 
 class FakeModel:
     def predict(self,input_data):
-        return random.randrange(7)
+        p = 7*[0]
+        p[random.randrange(7)] = 1
+        return p
 
 
 def prepare_data_for_prediction(input_data):
     # only select last 100 samples
-    output_data = input_data[-100:, :]
+    output_data = input_data[-195:, :]
+    # preparation for 1D Neural Network
+    output_data = np.apply_along_axis(lambda x: symbionic.calc_envelope(x,smooth=51), 0, output_data)
+    output_data = output_data.reshape((1,output_data.shape[0]*output_data.shape[1]))
     return output_data
 
 
@@ -51,6 +62,7 @@ class GestureModel:
             input_data = self.data_prepare(input_data)
         if self.model is not None:
             prediction = self.model.predict(input_data)
+            prediction = np.argmax(prediction)
         return prediction
 
 
@@ -104,11 +116,42 @@ def animate(draw=False):
         data_size = data.shape[0]  # data size
         x_data = [x for x in range(0, data_size)]  # x-axis data of graph
         for chan in range(len(lines)):
-            #ax[chan].set_xlim(0, data_size-1)
             lines[chan].set_xdata(x_data)
             lines[chan].set_ydata(data[:, chan])
         update_prediction(data)
     return line,  # matplotlib.animation requires an iterable (like a tuple) as output
+
+
+#This is where we lauch the file manager bar.
+def open_model_file():
+    name = askopenfilename(initialdir=application_directory,
+                           filetypes=(("H5 File", "*.h5"),),
+                           title="Choose a H5 model file."
+                           )
+    #Using try in case user types in unknown file or closes without choosing a file.
+    try:
+        # overwrite model
+        gestureModel.model = load_model(name)
+    except:
+        print("No file exists")
+
+
+def save_raw_data():
+    name = asksaveasfilename(initialdir=application_directory,
+                           filetypes=(("binary files","*.bin"),("all files","*.*")),
+                           title="Save your raw data."
+                           )
+    try:
+        dataHandler = receiver.dataHandler
+        chained_data = dataHandler.chain_all_packages(dataHandler.ExtendedDeviceData)
+        # convert to bytes
+        #bytes = struct.pack("{}I".format(len(chained_data)), *chained_data)
+        bytes = bytearray(chained_data)
+        output_file = open(name, "wb")
+        output_file.write(bytes)
+        output_file.close()
+    except:
+        print("File writing failed")
 
 
 ############## Tkinter ################
@@ -152,6 +195,15 @@ for g in range(6):
 # add buttons
 ttk.Button(lower_frame, text="Connect", command=start_data_receiver).pack(side=RIGHT, padx=5)
 ttk.Button(lower_frame, text="Disconnect", command=stop_data_receiver).pack(side=RIGHT, padx=5)
+
+# menu
+menu = Menu(root)
+root.config(menu=menu)
+file = Menu(menu)
+file.add_command(label='Save data', command=save_raw_data)
+file.add_command(label='Load Model', command=open_model_file)
+file.add_command(label='Exit', command=lambda:exit())
+menu.add_cascade(label='File', menu=file)
 
 # get going
 ani = animation.FuncAnimation(fig, animate, interval=300)
