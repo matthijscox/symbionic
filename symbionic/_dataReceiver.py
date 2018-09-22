@@ -31,9 +31,11 @@ class GFDataReceiverSocket:
 
     def stop(self):
         # don't stop the thread itself, just set the flag to false
-        self.internalThread.do_run = False
-        self.client_socket.close()
-        self.connected = False
+        if self.connected:
+            if self.internalThread is not None and self.internalThread.is_alive():
+                self.internalThread.do_run = False
+            self.client_socket.close()
+            self.connected = False
 
     def run(self):
         while getattr(self.internalThread, "do_run", True):
