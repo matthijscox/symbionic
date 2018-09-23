@@ -10,8 +10,15 @@ import numpy as np
 from keras.models import load_model
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 import os
+import sys
 
-application_directory = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, 'frozen', False):
+    # frozen
+    application_directory = os.path.dirname(sys.executable)
+else:
+    # unfrozen
+    application_directory = os.path.dirname(os.path.abspath(__file__))
+
 
 # create figure for inside the gui
 fig = Figure(figsize=(7, 6))
@@ -19,6 +26,7 @@ fig = Figure(figsize=(7, 6))
 # use a stubbed receiver
 receiver = symbionic.GFDataReceiverSocket(stub=True)
 number_of_packages = 15
+number_of_gestures = 6
 package_size = 16
 gestures = []
 
@@ -119,6 +127,7 @@ def animate(draw=False):
             lines[chan].set_xdata(x_data)
             lines[chan].set_ydata(data[:, chan])
         update_prediction(data)
+        root.update_idletasks()  # improves performance significantly
     return line,  # matplotlib.animation requires an iterable (like a tuple) as output
 
 
@@ -142,13 +151,11 @@ def save_raw_data():
                            title="Save your raw data."
                            )
     try:
-        dataHandler = receiver.dataHandler
-        chained_data = dataHandler.chain_all_packages(dataHandler.ExtendedDeviceData)
-        # convert to bytes
-        #bytes = struct.pack("{}I".format(len(chained_data)), *chained_data)
-        bytes = bytearray(chained_data)
+        device_data = receiver.dataHandler.ExtendedDeviceData
+        chained_data = receiver.dataHandler.chain_all_packages(device_data)
+        # save in binary format
         output_file = open(name, "wb")
-        output_file.write(bytes)
+        output_file.write(bytearray(chained_data))
         output_file.close()
     except:
         print("File writing failed")
@@ -187,7 +194,7 @@ middle_right_frame = ttk.Frame(middle_frame, style='My.TFrame')
 middle_right_frame.pack(side=LEFT, expand=True, padx=20)
 
 #v = IntVar()
-for g in range(6):
+for g in range(number_of_gestures):
     gesture = ttk.Label(middle_right_frame, text=f"Gesture {g+1}", style='Disabled.TLabel')
     gesture.pack(pady=5)
     gestureViewer.add(gesture)
