@@ -1,0 +1,21 @@
+#:import MeshLinePlot examples.graph.MeshLinePlot
+Logic:
+    BoxLayout:
+        orientation: "vertical"
+        BoxLayout:
+            orientation: "vertical"
+            id: upper_box
+            size_hint: [1, .8]
+        BoxLayout:
+            size_hint: [1, .2]
+            orientation: "horizontal"
+            Button:
+                id: start_button
+                text: "START"
+                bold: True
+                on_press: root.start()
+            Button:
+                id: stop_button
+                text: "STOP"
+                bold: True
+                on_press: root.stop()
