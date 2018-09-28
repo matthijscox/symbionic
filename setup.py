@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='symbionic',
-      version='0.21',
+      version='0.22',
       description='Code base for the Symbionic project',
       url='https://github.com/matthijscox/symbionic',
       author='Matthijs Cox',
