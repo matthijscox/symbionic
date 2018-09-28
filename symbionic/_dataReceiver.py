@@ -113,10 +113,13 @@ class GFDataHandler:
         self.GestureData = data
 
     def HandleExtendedDeviceData(self, dataType, data):
-        buffered_data = data[2:]  # removes first 2 bytes (assuming they are context info)
-        self.ExtendedDeviceData.append(buffered_data)
-        self.predictedGestures.append(self.currentPrediction)
-        self.totalPackages += 1
+        data_length = len(data)
+        if data_length is 128 or data_length is 130:
+            if data_length is 130:
+                data = data[2:]  # removes first 2 bytes (assuming they are context info)
+            self.ExtendedDeviceData.append(data)
+            self.predictedGestures.append(self.currentPrediction)
+            self.totalPackages += 1
 
     def get_latest_extended_device_data(self, packages=None):
         if packages is not None:
