@@ -68,3 +68,12 @@ def test_receiver_restart():
     receiver.stop()
     assert not receiver.connected, "Receiver should not have been running"
     assert not receiver.internalThread.do_run, "Thread should have not been running"
+
+
+def test_data_handler_prediction_update():
+    receiver = get_running_receiver_stub(0.03)
+    time.sleep(0.04)
+    receiver.dataHandler.currentPrediction = 2
+    time.sleep(0.04)
+    assert receiver.dataHandler.predictedGestures[-1] is 2
+    assert len(receiver.dataHandler.get_device_data_for_prediction(2))>1

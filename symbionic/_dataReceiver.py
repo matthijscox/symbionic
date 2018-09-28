@@ -103,6 +103,8 @@ class GFDataHandler:
         self.totalPackages = 0
         self.sentPackages = 0
         self.latestPackages = []
+        self.currentPrediction = 0
+        self.predictedGestures = []
 
     def HandleOrientationData(self, f1,f2,f3,f4):
         self.OrientationData = [f1,f2,f3,f4]
@@ -113,6 +115,7 @@ class GFDataHandler:
     def HandleExtendedDeviceData(self, dataType, data):
         buffered_data = data[2:]  # removes first 2 bytes (assuming they are context info)
         self.ExtendedDeviceData.append(buffered_data)
+        self.predictedGestures.append(self.currentPrediction)
         self.totalPackages += 1
 
     def get_latest_extended_device_data(self, packages=None):
@@ -141,6 +144,9 @@ class GFDataHandler:
             emg_data = emg_data - mean[:, np.newaxis]
         return emg_data
 
+    def get_device_data_for_prediction(self,prediction=0):
+        data_for_prediction = [x for (x,p) in zip(self.ExtendedDeviceData,self.predictedGestures) if p is prediction]
+        return data_for_prediction
 
 def get_random_bytes(data_length):
     return bytearray(random.getrandbits(8) for _ in range(data_length))

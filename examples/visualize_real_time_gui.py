@@ -8,7 +8,7 @@ import time
 import random
 import numpy as np
 from keras.models import load_model
-from tkinter.filedialog import askopenfilename, asksaveasfilename
+from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory
 import os
 import sys
 
@@ -26,7 +26,7 @@ fig = Figure(figsize=(7, 6))
 # use a stubbed receiver
 receiver = symbionic.GFDataReceiverSocket(stub=True)
 number_of_packages = 15
-number_of_gestures = 6
+number_of_gestures = 7
 package_size = 16
 gestures = []
 
@@ -74,30 +74,49 @@ class GestureModel:
         return prediction
 
 
-gestureModel = GestureModel(FakeModel(), prepare_data_for_prediction)
+gestureModel = GestureModel(FakeModel())
 
 
-class GestureViewer:
-    def __init__(self):
+class GestureViewer(ttk.Frame):
+    def __init__(self, master=None, n_gestures=number_of_gestures):
+        ttk.Frame.__init__(self, master, style='My.TFrame')
+        self.master = master
         self.gestures = []
         self.prediction = 0
+        self.previous_prediction = 0
+        self.gesture_disabled_style = 'Disabled.TRadiobutton'
+        self.gesture_enabled_style = 'Enabled.TRadiobutton'
+        self.selected_gesture = IntVar()
+        self.selected_gesture.set(0)
+        for g in range(n_gestures):
+            if g is 0:
+                gesture_name = "No Gesture"
+            else:
+                gesture_name = f"Gesture {g}"
+            gesture = ttk.Radiobutton(self,
+                                      text=gesture_name,
+                                      style=self.gesture_disabled_style,
+                                      variable=self.selected_gesture,
+                                      value=g)
+            gesture.pack(pady=5)
+            self.add(gesture)
 
     def add(self, gesture):
         self.gestures.append(gesture)
 
     def show_prediction(self):
-        for g in self.gestures:
-            g.configure(style='Disabled.TLabel')
-        if self.prediction is not 0:
-            self.gestures[self.prediction-1].configure(style='Enabled.TLabel')
+        self.set_gesture_style(self.previous_prediction,self.gesture_disabled_style)
+        self.set_gesture_style(self.prediction, self.gesture_enabled_style)
 
+    def update_prediction(self,input_data):
+        self.previous_prediction = self.prediction
+        self.prediction = gestureModel.predict(input_data)
+        receiver.dataHandler.currentPrediction = self.prediction
+        self.show_prediction()
 
-gestureViewer = GestureViewer()
-
-
-def update_prediction(input_data):
-    gestureViewer.prediction = gestureModel.predict(input_data)
-    gestureViewer.show_prediction()
+    def set_gesture_style(self,predicted_gesture,style):
+        if predicted_gesture<len(self.gestures):
+            self.gestures[predicted_gesture].configure(style=style)
 
 
 def init_plot(channels=8):
@@ -118,20 +137,6 @@ def init_plot(channels=8):
     return line,
 
 
-def animate(draw=False):
-    if receiver.connected:
-        data = receiver.dataHandler.get_latest_emg_data(number_of_packages)
-        data_size = data.shape[0]  # data size
-        x_data = [x for x in range(0, data_size)]  # x-axis data of graph
-        for chan in range(len(lines)):
-            lines[chan].set_xdata(x_data)
-            lines[chan].set_ydata(data[:, chan])
-        update_prediction(data)
-        root.update_idletasks()  # improves performance significantly
-    return line,  # matplotlib.animation requires an iterable (like a tuple) as output
-
-
-#This is where we lauch the file manager bar.
 def open_model_file():
     name = askopenfilename(initialdir=application_directory,
                            filetypes=(("H5 File", "*.h5"),),
@@ -161,6 +166,21 @@ def save_raw_data():
         print("File writing failed")
 
 
+def save_raw_data_per_gesture():
+    dir_name = askdirectory(initialdir=application_directory,
+                           title="Save your raw data."
+                           )
+    try:
+        device_data = receiver.dataHandler.ExtendedDeviceData
+        chained_data = receiver.dataHandler.chain_all_packages(device_data)
+        # save in binary format
+        output_file = open(os.path.abspath(dir_name+'/raw1.bin'), "wb")
+        output_file.write(bytearray(chained_data))
+        output_file.close()
+    except:
+        print("File writing failed")
+
+
 ############## Tkinter ################
 root = Tk()
 root.title("Symbionic GUI")
@@ -171,6 +191,52 @@ gui_style = ttk.Style()
 gui_style.configure('My.TFrame', background='white')
 gui_style.configure('Enabled.TLabel', foreground="red", font=("Helvetica", 24))
 gui_style.configure('Disabled.TLabel', foreground="black", font=("Helvetica", 24))
+gui_style.configure('Enabled.TRadiobutton', foreground="red", font=("Helvetica", 24))
+gui_style.configure('Disabled.TRadiobutton', foreground="black", font=("Helvetica", 24))
+gui_style.configure('Main.TButton', relief='flat', background='black')
+
+default_button_size = 80
+default_button_border = 4
+
+button_without_border_style = {
+    'relief': 'flat',
+    'activebackground': '#125D7D',
+    'background':'#1EB4F2',
+    'foreground':'white',
+    'activeforeground':'white',
+    'padx':5,
+    'font':("Helvetica", 16),
+    'highlightthickness': 0
+}
+
+button_with_border_style = {
+    'relief': 'flat',
+    'activebackground': 'white',
+    'background':'white',
+    'foreground':'#1EB4F2',
+    'activeforeground':'#125D7D',
+    'padx':5,
+    'font':("Helvetica", 16),
+}
+
+
+class ButtonWithoutBorder(Frame):
+    def __init__(self, master=None, height=default_button_size, bd=default_button_border, **kwargs):
+        Frame.__init__(self, master, background=button_without_border_style['background'], bd=bd)
+        self.configure(height=height)
+        self.button = Button(self, **button_without_border_style, **kwargs)
+        self.button.pack(fill='both', expand=1)
+
+
+class ButtonWithBorder(Frame):
+    def __init__(self, master=None, height=default_button_size, bd=default_button_border, **kwargs):
+        Frame.__init__(self, master, background=button_with_border_style['foreground'], bd=bd)
+        self.configure(height=height)
+        self.button = Button(self, **button_with_border_style, **kwargs)
+        self.button.pack(fill='both', expand=1)
+
+#tk_style = Style()
+#tk_style.configure('Main.TButton', relief='flat', background='black')
 
 top_frame = ttk.Frame(root, padding="3 3 12 12", style='My.TFrame')
 middle_frame = ttk.Frame(root, padding="3 3 12 12", style='My.TFrame')
@@ -180,7 +246,7 @@ middle_frame.pack(fill="both", expand=True)
 lower_frame.pack(fill="both", expand=True)
 
 # add top label
-ttk.Label(top_frame, text="Nice GUI", background='white').pack(anchor='center')
+ttk.Label(top_frame, text="", background='white').pack(anchor='center')
 
 # add a figure
 middle_left_frame = ttk.Frame(middle_frame, style='My.TFrame')
@@ -190,18 +256,15 @@ canvas = FigureCanvasTkAgg(fig, master=middle_left_frame)
 canvas.draw()
 canvas.get_tk_widget().pack()
 
-middle_right_frame = ttk.Frame(middle_frame, style='My.TFrame')
-middle_right_frame.pack(side=LEFT, expand=True, padx=20)
-
-#v = IntVar()
-for g in range(number_of_gestures):
-    gesture = ttk.Label(middle_right_frame, text=f"Gesture {g+1}", style='Disabled.TLabel')
-    gesture.pack(pady=5)
-    gestureViewer.add(gesture)
+#middle_right_frame = ttk.Frame(middle_frame, style='My.TFrame')
+#middle_right_frame.pack(side=LEFT, expand=True, padx=20)
+# add the gesture viewer to the frame
+gestureViewer = GestureViewer(middle_frame)
+gestureViewer.pack(side=LEFT, expand=True, padx=20)
 
 # add buttons
-ttk.Button(lower_frame, text="Connect", command=start_data_receiver).pack(side=RIGHT, padx=5)
-ttk.Button(lower_frame, text="Disconnect", command=stop_data_receiver).pack(side=RIGHT, padx=5)
+ButtonWithoutBorder(lower_frame, text=" Connect ", command=start_data_receiver).pack(side=RIGHT, padx=5)
+ButtonWithBorder(lower_frame, text="Disconnect", command=stop_data_receiver).pack(side=RIGHT, padx=5)
 
 # menu
 menu = Menu(root)
@@ -211,6 +274,20 @@ file.add_command(label='Save data', command=save_raw_data)
 file.add_command(label='Load Model', command=open_model_file)
 file.add_command(label='Exit', command=lambda:exit())
 menu.add_cascade(label='File', menu=file)
+
+
+def animate(draw=False):
+    if receiver.connected:
+        data = receiver.dataHandler.get_latest_emg_data(number_of_packages)
+        data_size = data.shape[0]  # data size
+        x_data = [x for x in range(0, data_size)]  # x-axis data of graph
+        for chan in range(len(lines)):
+            lines[chan].set_xdata(x_data)
+            lines[chan].set_ydata(data[:, chan])
+        gestureViewer.update_prediction(data)
+        root.update_idletasks()  # improves performance significantly
+    return line,  # matplotlib.animation requires an iterable (like a tuple) as output
+
 
 # get going
 ani = animation.FuncAnimation(fig, animate, interval=300)
