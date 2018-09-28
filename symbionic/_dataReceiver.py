@@ -123,6 +123,9 @@ class GFDataHandler:
 
     def get_latest_extended_device_data(self, packages=None):
         if packages is not None:
+            if packages > self.totalPackages:
+                # if the buffer is not full enough yet
+                packages = self.totalPackages
             self.latestPackages = self.ExtendedDeviceData[-packages:]
         elif self.sentPackages is not self.totalPackages:
             # get the last packages that have not yet been sent
