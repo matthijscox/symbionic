@@ -1,0 +1,38 @@
+#:import MeshLinePlot symbionic.gui.graph.MeshLinePlot
+Logic:
+    BoxLayout:
+        orientation: "vertical"
+        padding: 40
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint: [1, .8]
+            BoxLayout:
+                orientation: "vertical"
+                id: raw_data_box
+                size_hint: [0.4, 1]
+            BoxLayout:
+                orientation: "vertical"
+                size_hint: [0.1, 1]
+            BoxLayout:
+                orientation: "vertical"
+                id: gesture_box
+                size_hint: [0.4, 1]
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint: [1, .2]
+            BoxLayout:
+                orientation: "horizontal"
+            BoxLayout:
+                size_hint: None, None
+                size: 300, 50
+                orientation: "horizontal"
+                Button:
+                    id: start_button
+                    text: "START"
+                    bold: True
+                    on_press: root.start()
+                Button:
+                    id: stop_button
+                    text: "STOP"
+                    bold: True
+                    on_press: root.stop()
