@@ -2,37 +2,76 @@
 Logic:
     BoxLayout:
         orientation: "vertical"
-        padding: 40
+        ActionBar:
+            pos_hint: {'top':1}
+            ActionView:
+                use_separator: True
+                ActionPrevious:
+                    title: 'Symbionic App'
+                    with_previous: False
+                ActionGroup:
+                    text: 'Actions'
+                    mode: 'spinner'
+                    ActionButton:
+                        text: 'Save Model'
+                    ActionButton:
+                        text: 'Load Model'
+                    ActionButton:
+                        text: 'Save Data'
+                    ActionButton:
+                        text: 'Load Data'
         BoxLayout:
-            orientation: "horizontal"
-            size_hint: [1, .8]
-            BoxLayout:
-                orientation: "vertical"
-                id: raw_data_box
-                size_hint: [0.4, 1]
-            BoxLayout:
-                orientation: "vertical"
-                size_hint: [0.1, 1]
-            BoxLayout:
-                orientation: "vertical"
-                id: gesture_box
-                size_hint: [0.4, 1]
-        BoxLayout:
-            orientation: "horizontal"
-            size_hint: [1, .2]
+            orientation: "vertical"
+            padding: 40
             BoxLayout:
                 orientation: "horizontal"
+                size_hint: [1, .8]
+                BoxLayout:
+                    orientation: "vertical"
+                    size_hint: [0.4, 1]
+                    BoxLayout:
+                        orientation: "vertical"
+                        size_hint: [1, 0.1]
+                        Label:
+                            font_size: 20
+                            text: "Raw Data Signals"
+                    BoxLayout:
+                        orientation: "vertical"
+                        id: raw_data_box
+                        size_hint: [1, 0.9]
+                BoxLayout:
+                    orientation: "vertical"
+                    size_hint: [0.1, 1]
+                BoxLayout:
+                    orientation: "vertical"
+                    size_hint: [0.4, 1]
+                    BoxLayout:
+                        orientation: "vertical"
+                        id: raw_data_title
+                        size_hint: [1, 0.1]
+                        Label:
+                            font_size: 20
+                            text: "Gesture Predictions"
+                    BoxLayout:
+                        orientation: "vertical"
+                        id: gesture_box
+                        size_hint: [1, 0.9]
             BoxLayout:
-                size_hint: None, None
-                size: 300, 50
                 orientation: "horizontal"
-                Button:
-                    id: start_button
-                    text: "START"
-                    bold: True
-                    on_press: root.start()
-                Button:
-                    id: stop_button
-                    text: "STOP"
-                    bold: True
-                    on_press: root.stop()
+                size_hint: [1, .2]
+                BoxLayout:
+                    orientation: "horizontal"
+                BoxLayout:
+                    size_hint: None, None
+                    size: 300, 50
+                    orientation: "horizontal"
+                    Button:
+                        id: start_button
+                        text: "START"
+                        bold: True
+                        on_press: root.start()
+                    Button:
+                        id: stop_button
+                        text: "STOP"
+                        bold: True
+                        on_press: root.stop()

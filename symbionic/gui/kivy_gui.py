@@ -116,15 +116,15 @@ class GraphBox:
 
     def init_graphs(self):
         for g in range(self.number_of_graphs):
-            self.add_graph()
+            self.add_graph(self.box_id)
 
-    def add_graph(self):
+    def add_graph(self, box_id):
         graph = Graph(xmin=-0, xmax=100, ymin=self.ylim[0], ymax=self.ylim[1])
         plot = LinePlot(color=[1, 0, 0, 1], line_width=1.1)
         graph.add_plot(plot)
         self.plots.append(plot)
         self.graphs.append(graph)
-        self.box_id.add_widget(graph)
+        box_id.add_widget(graph)
 
     def update_graphs(self,data):
         buffer_size = data.shape[0]  # data size
