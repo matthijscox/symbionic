@@ -154,6 +154,19 @@ class GFDataHandler:
         data_for_prediction = [x for (x,p) in zip(self.ExtendedDeviceData,self.predictedGestures) if p is prediction]
         return data_for_prediction
 
+    def get_chained_device_data_for_prediction(self,prediction=0):
+        data = self.get_device_data_for_prediction(prediction)
+        return self.chain_all_packages(data)
+
+    def get_emg_data_object(self,n_gestures=6):
+        emg_data = symbionic.EmgData()
+        for g in range(1,n_gestures+1):
+            emg_values = self.get_chained_device_data_for_prediction(g)
+            if emg_values is not None and len(emg_values) > 0:
+                emg_data.store_emg_values_in_gesture(emg_values,f'g{g}')
+        return emg_data
+
+
 def get_random_bytes(data_length):
     return bytearray(random.getrandbits(8) for _ in range(data_length))
 

@@ -25,7 +25,8 @@ def load_emg_data_single_gesture():
 
 def test_list_to_dataframe():
     emg_data = symbionic.EmgData()
-    df = emg_data.convert_emg_values_to_dataframe(raw_emg_data_sample(),demean=False)
+    emg_data.demean_data = False
+    df = emg_data.convert_emg_values_to_dataframe(raw_emg_data_sample())
     assert df.shape == (2, emg_data.channels + 1), 'Output shape does not match'
     assert df[emg_data.channel_names[0]].tolist() == [1.1]*2
 
@@ -58,3 +59,11 @@ def test_windowed_data_retrieval():
     expected_sample = gesture_data['emg5'].values[step_size:step_size+window_size] # manually create the windowed sample
     assert all(actual_sample == expected_sample), 'Sample is not as expected'
     assert all((samples['y'] == 0) | (samples['y'] == 2)), 'Expected only the relaxed and 1 other gesture'
+
+
+def test_unlabeled_windowed_data_retrieval():
+    emg_data = load_emg_data_single_gesture()
+    emg_data.is_labeled = False
+    samples = emg_data.get_training_samples()
+    assert samples['X'].shape == (984, 130, 8), 'Output data shape is unexpected'
+    assert all(samples['y'] == 2), 'Expected all y labels to be 2'

@@ -75,5 +75,6 @@ def test_data_handler_prediction_update():
     time.sleep(0.04)
     receiver.dataHandler.currentPrediction = 2
     time.sleep(0.04)
+    receiver.stop()
     assert receiver.dataHandler.predictedGestures[-1] is 2
     assert len(receiver.dataHandler.get_device_data_for_prediction(2))>1

@@ -1,7 +1,8 @@
 import random
 import numpy as np
 import symbionic
-
+from sklearn.ensemble import RandomForestClassifier
+from keras.utils import np_utils
 
 def prepare_data_for_keras(input_data):
     # only select last 195 samples
@@ -41,13 +42,19 @@ class GestureModel:
 
     def predict(self,input_data):
         prediction = 0
-        if self.data_prepare is not None:
-            input_data = self.data_prepare(input_data)
+        input_data = self.prepare(input_data)
         if self.model is not None:
             prediction = self.model.predict(input_data)
             if self.collapse:
                 prediction = np.argmax(prediction)
         return prediction
+
+    def prepare(self,input_data):
+        if self.data_prepare is not None:
+            output_data = self.data_prepare(input_data)
+        else:
+            output_data = input_data
+        return output_data
 
 
 class PredictionBuffer:
@@ -65,3 +72,13 @@ class PredictionBuffer:
         predictions = self.buffer
         predictions = [p[-number_of_predictions:] for p in predictions]
         return np.array(predictions).transpose()
+
+
+class AbsMaxRandomForestModel(GestureModel):
+    def __init__(self):
+        super().__init__(model=RandomForestClassifier(), data_prepare=take_max_abs)
+
+    def fit(self, data, labels):
+        max_abs_of_data = np.apply_along_axis(absmax_at_end, 1, data)
+        dummy_y = np_utils.to_categorical(labels)
+        self.model.fit(max_abs_of_data, dummy_y)
