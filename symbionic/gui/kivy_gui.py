@@ -4,6 +4,8 @@ from kivy.lang import Builder
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
+from kivy.uix.checkbox import CheckBox
+from kivy.properties import StringProperty
 import symbionic
 from symbionic.gui.graph import Graph, LinePlot
 from symbionic._model import FakeModel, GestureModel, PredictionBuffer, take_max_abs
@@ -60,6 +62,8 @@ class RandomForestModel:
 
 
 class Logic(BoxLayout):
+    selected_gesture = StringProperty()
+
     def __init__(self):
         super().__init__()
         self.number_of_channels = 8
@@ -68,20 +72,28 @@ class Logic(BoxLayout):
         self.update_interval = 0.1
         self.graphs = []
         self.plots = []
+        self.cbs = []
         self.receiver = symbionic.GFDataReceiverSocket(stub=True)
         self.fake_data = FileDataStub()
         self.rawDataBox = []
-        self.gestureBox = []
+        self.gestureGraph = []
+        self.gestureCheckbox = []
         self.gestureModel = GestureModel(FakeModel(self.number_of_gestures), data_prepare=take_max_abs)
         #self.gestureModel.model = RandomForestModel()
         self.predictions = PredictionBuffer(self.number_of_gestures)
+        self.selected_gesture = str(0)
 
     def init_graphs(self):
-        self.rawDataBox = GraphBox(self.ids.raw_data_box,self.number_of_channels)
+        self.rawDataBox = GraphBox(self.ids.raw_data_box, self.number_of_channels)
         self.rawDataBox.init_graphs()
-        self.gestureBox = GraphBox(self.ids.gesture_box, self.number_of_gestures)
-        self.gestureBox.ylim = (-0.1,1.1)
-        self.gestureBox.init_graphs()
+        self.gestureGraph = GraphBox(self.ids.gesture_graph, self.number_of_gestures)
+        self.gestureGraph.ylim = (-0.1,1.1)
+        self.gestureGraph.init_graphs()
+
+
+    def init_checkbox(self):
+        self.gestureCheckbox = clsCheckBox(self, self.ids.gesture_checkbox, self.number_of_gestures, "gestures")
+        self.gestureCheckbox.init_cbs()
 
     def start(self):
         self.receiver.start()
@@ -104,8 +116,31 @@ class Logic(BoxLayout):
 
     def update_prediction_graphs(self):
         predictions = self.predictions.get_predictions()
-        self.gestureBox.update_graphs(predictions)
+        self.gestureGraph.update_graphs(predictions)
 
+
+class clsCheckBox:
+    def __init__(self, Logic, cbox_id, number_of_cbs, CB_group):
+        self.Logic = Logic
+        self.cbox_id = cbox_id
+        self.number_of_cbs = number_of_cbs
+        self.CB_group = CB_group
+        self.cbs = []
+        self.ylim = (-150,150)
+
+    def init_cbs(self):
+        for g in range(self.number_of_cbs):
+            self.add_cb(self.cbox_id)
+
+    def add_cb(self, box_id):
+        cbs = CheckBox(group=self.CB_group)
+        cbs.bind(active=self.on_checkbox_active)
+        self.cbs.append(cbs)
+        box_id.add_widget(cbs)
+
+    def on_checkbox_active(self, checkboxId, isActive):
+        if isActive:
+           self.Logic.selected_gesture = str(self.cbs.index(checkboxId) + 1)
 
 class GraphBox:
     def __init__(self, box_id, number_of_graphs):
@@ -142,8 +177,8 @@ class SymbionicApp(App):
     def build(self):
         self.root = Builder.load_file("look.kv")
         self.root.init_graphs()
+        self.root.init_checkbox()
         return self.root
-
 
 if __name__ == "__main__":
     SymbionicApp().run()
