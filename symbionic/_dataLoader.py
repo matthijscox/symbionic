@@ -8,6 +8,17 @@ from symbionic import _plotting
 import os
 
 
+def get_dist_to_nearest_pattern_function(labeled):
+    indices = numpy.nonzero(numpy.r_[1, numpy.diff(labeled)[:-1]])
+    start_of_patterns = indices[0][1::2]
+
+    def dist_to_nearest_pattern(index):
+        nearest_index = (numpy.abs(start_of_patterns - index)).argmin()
+        return index - start_of_patterns[nearest_index]
+
+    return dist_to_nearest_pattern
+
+
 class EmgData:
     def __init__(self, channels: int = 8, sample_rate: int = 650, gestures: int = 6):
         self.channels = channels
@@ -19,6 +30,7 @@ class EmgData:
         self.has_data = dict([(g, False) for g in self.gesture_names])
         self.envelope = self._init_gesture_dict()
         self.demean_data = True
+        self.is_labeled = False
 
     def _init_gesture_dict(self):
         return dict([(g, None) for g in self.gesture_names])  # gestures, called g1, g2, etc
@@ -70,6 +82,7 @@ class EmgData:
     def store_dataframe_in_gesture(self,gesture,df):
         self.data[gesture] = df
         self.has_data[gesture] = True
+        self.is_labeled = False
 
     def get_data_from_gesture(self, gesture):
         return self.data[gesture]
@@ -89,6 +102,7 @@ class EmgData:
 
     def label_patterns(self):
         self.run_method_on_gestures('_label_patterns')
+        self.is_labeled = True
 
     def _calc_envelope(self, gesture):
         # convert raw signals to envelope (pretty fast)
@@ -135,14 +149,16 @@ class EmgData:
         data: DataFrame = self.data[gesture]
         g = self.get_gesture_index(gesture)
         channel_names = self.channel_names
-        labeled = data['labeled']
-        # find the distance to the nearest pattern
-        indices = numpy.nonzero(numpy.r_[1, numpy.diff(labeled)[:-1]])
-        start_of_patterns = indices[0][1::2]
 
-        def dist_to_nearest_pattern(index):
-            nearest_index = (numpy.abs(start_of_patterns - index)).argmin()
-            return index - start_of_patterns[nearest_index]
+        if self.is_labeled:
+            labeled = data['labeled']
+            dist_to_nearest_pattern = get_dist_to_nearest_pattern_function(labeled)
+        else:
+            # assume all data is the gesture
+            labeled = numpy.array([True for _ in range(data.shape[0])])
+
+            def dist_to_nearest_pattern(index):
+                return 0
 
         # create sliding windowed samples
         # used 2nd answer from here: https://stackoverflow.com/questions/15722324/sliding-window-in-numpy

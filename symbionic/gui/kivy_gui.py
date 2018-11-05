@@ -2,16 +2,19 @@
 #follow installation guide!!
 from kivy.lang import Builder
 from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
+from kivy.factory import Factory
+from kivy.properties import ObjectProperty, StringProperty
+from kivy.core.window import Window
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.checkbox import CheckBox
-from kivy.properties import StringProperty
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.popup import Popup
 import symbionic
 from symbionic.gui.graph import Graph, LinePlot
 from symbionic._model import FakeModel, GestureModel, PredictionBuffer, take_max_abs
-from kivy.core.window import Window
 from sklearn.externals import joblib
-
+import os
 
 class DataIterator:
     def __init__(self, data):
@@ -61,9 +64,22 @@ class RandomForestModel:
         return predictions.ravel()
 
 
-class Logic(BoxLayout):
-    selected_gesture = StringProperty()
+def save_raw_data(receiver,file_path):
+    device_data = receiver.dataHandler.ExtendedDeviceData
+    chained_data = receiver.dataHandler.chain_all_packages(device_data)
+    # save in binary format
+    output_file = open(file_path, "wb")
+    output_file.write(bytearray(chained_data))
+    output_file.close()
 
+
+class SaveDialog(FloatLayout):
+    save = ObjectProperty(None)
+    text_input = ObjectProperty(None)
+    cancel = ObjectProperty(None)
+
+
+class Root(BoxLayout):
     def __init__(self):
         super().__init__()
         self.number_of_channels = 8
@@ -81,7 +97,9 @@ class Logic(BoxLayout):
         self.gestureModel = GestureModel(FakeModel(self.number_of_gestures), data_prepare=take_max_abs)
         #self.gestureModel.model = RandomForestModel()
         self.predictions = PredictionBuffer(self.number_of_gestures)
-        self.selected_gesture = str(0)
+        self.selected_gesture = StringProperty()
+        self._popup = ObjectProperty(None)
+        self.saving_method = save_raw_data
 
     def init_graphs(self):
         self.rawDataBox = GraphBox(self.ids.raw_data_box, self.number_of_channels)
@@ -104,8 +122,8 @@ class Logic(BoxLayout):
         Clock.unschedule(self.update_gui)
 
     def update_gui(self, dt):
-        #data = self.receiver.dataHandler.get_latest_emg_data(self.number_of_packages)
-        data = next(self.fake_data)
+        data = self.receiver.dataHandler.get_latest_emg_data(self.number_of_packages)
+        #data = next(self.fake_data)
         self.rawDataBox.update_graphs(data)
         self.update_predictions(data)
         self.update_prediction_graphs()
@@ -117,6 +135,25 @@ class Logic(BoxLayout):
     def update_prediction_graphs(self):
         predictions = self.predictions.get_predictions()
         self.gestureGraph.update_graphs(predictions)
+
+    def dismiss_popup(self):
+        self._popup.dismiss()
+
+    def show_raw_data_save(self):
+        self.saving_method = save_raw_data
+        self.show_save()
+
+    def show_save(self):
+        # https://kivy.org/doc/stable/api-kivy.uix.filechooser.html
+        content = SaveDialog(save=self.save, cancel=self.dismiss_popup)
+        self._popup = Popup(title="Save file", content=content,
+                            size_hint=(0.9, 0.9))
+        self._popup.open()
+
+    def save(self, path, filename):
+        file_path = os.path.join(path, filename)
+        self.saving_method(self.receiver,file_path)
+        self.dismiss_popup()
 
 
 class clsCheckBox:
@@ -179,6 +216,10 @@ class SymbionicApp(App):
         self.root.init_graphs()
         self.root.init_checkbox()
         return self.root
+
+Factory.register('Root', cls=Root)
+#Factory.register('LoadDialog', cls=LoadDialog)
+Factory.register('SaveDialog', cls=SaveDialog)
 
 if __name__ == "__main__":
     SymbionicApp().run()
