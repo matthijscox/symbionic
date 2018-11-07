@@ -80,6 +80,8 @@ class SaveDialog(FloatLayout):
 
 
 class Root(BoxLayout):
+    selected_gesture = StringProperty()
+
     def __init__(self):
         super().__init__()
         self.number_of_channels = 8
@@ -88,7 +90,7 @@ class Root(BoxLayout):
         self.update_interval = 0.1
         self.graphs = []
         self.plots = []
-        self.cbs = []
+        self.checkboxes = []
         self.receiver = symbionic.GFDataReceiverSocket(stub=True)
         self.fake_data = FileDataStub()
         self.rawDataBox = []
@@ -97,7 +99,7 @@ class Root(BoxLayout):
         self.gestureModel = GestureModel(FakeModel(self.number_of_gestures), data_prepare=take_max_abs)
         #self.gestureModel.model = RandomForestModel()
         self.predictions = PredictionBuffer(self.number_of_gestures)
-        self.selected_gesture = StringProperty()
+        self.selected_gesture = str(0)
         self._popup = ObjectProperty(None)
         self.saving_method = save_raw_data
 
@@ -111,7 +113,7 @@ class Root(BoxLayout):
 
     def init_checkbox(self):
         self.gestureCheckbox = clsCheckBox(self, self.ids.gesture_checkbox, self.number_of_gestures, "gestures")
-        self.gestureCheckbox.init_cbs()
+        self.gestureCheckbox.init_checkboxes()
 
     def start(self):
         self.receiver.start()
@@ -157,27 +159,27 @@ class Root(BoxLayout):
 
 
 class clsCheckBox:
-    def __init__(self, Logic, cbox_id, number_of_cbs, CB_group):
-        self.Logic = Logic
-        self.cbox_id = cbox_id
-        self.number_of_cbs = number_of_cbs
-        self.CB_group = CB_group
-        self.cbs = []
+    def __init__(self, Root, checkbox_id, number_of_checkboxes, checkbox_group):
+        self.Root = Root
+        self.checkbox_id = checkbox_id
+        self.number_of_checkboxes = number_of_checkboxes
+        self.checkbox_group = checkbox_group
+        self.checkboxes = []
         self.ylim = (-150,150)
 
-    def init_cbs(self):
-        for g in range(self.number_of_cbs):
-            self.add_cb(self.cbox_id)
+    def init_checkboxes(self):
+        for g in range(self.number_of_checkboxes):
+            self.add_checkbox(self.checkbox_id)
 
-    def add_cb(self, box_id):
-        cbs = CheckBox(group=self.CB_group)
-        cbs.bind(active=self.on_checkbox_active)
-        self.cbs.append(cbs)
-        box_id.add_widget(cbs)
+    def add_checkbox(self, box_id):
+        checkbox = CheckBox(group=self.checkbox_group)
+        checkbox.bind(active=self.on_checkbox_active)
+        self.checkboxes.append(checkbox)
+        box_id.add_widget(checkbox)
 
     def on_checkbox_active(self, checkboxId, isActive):
         if isActive:
-           self.Logic.selected_gesture = str(self.cbs.index(checkboxId) + 1)
+           self.Root.selected_gesture = str(self.checkboxes.index(checkboxId) + 1)
 
 class GraphBox:
     def __init__(self, box_id, number_of_graphs):
