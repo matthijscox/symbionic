@@ -43,6 +43,10 @@ Root:
                 BoxLayout:
                     orientation: "vertical"
                     size_hint: [0.1, 1]
+                    BoxLayout:
+                        orientation: "vertical"
+                        id: gesture_checkbox
+                        size_hint: [0.1,0.1]
                 BoxLayout:
                     orientation: "vertical"
                     size_hint: [0.4, 1]
@@ -55,11 +59,20 @@ Root:
                             text: "Gesture Predictions"
                     BoxLayout:
                         orientation: "vertical"
-                        id: gesture_box
+                        id: gesture_graph
                         size_hint: [1, 0.9]
             BoxLayout:
                 orientation: "horizontal"
                 size_hint: [1, .2]
+                BoxLayout:
+                    size_hint: [1, 1]
+                    halign: "left"
+                    Label:
+                        font_size: 20
+                        text: "Selected Gesture:"
+                    Label:
+                        font_size: 20
+                        text: root.selected_gesture
                 BoxLayout:
                     orientation: "horizontal"
                 BoxLayout:

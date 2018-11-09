@@ -2,17 +2,17 @@
 #follow installation guide!!
 from kivy.lang import Builder
 from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
-from kivy.app import App
-from kivy.uix.floatlayout import FloatLayout
 from kivy.factory import Factory
-from kivy.properties import ObjectProperty
+from kivy.properties import ObjectProperty, StringProperty
+from kivy.core.window import Window
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.checkbox import CheckBox
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.popup import Popup
 import symbionic
 from symbionic.gui.graph import Graph, LinePlot
 from symbionic._model import FakeModel, GestureModel, PredictionBuffer, take_max_abs
-from kivy.core.window import Window
 from sklearn.externals import joblib
 import os
 
@@ -80,6 +80,8 @@ class SaveDialog(FloatLayout):
 
 
 class Root(BoxLayout):
+    selected_gesture = StringProperty()
+
     def __init__(self):
         super().__init__()
         self.number_of_channels = 8
@@ -88,22 +90,30 @@ class Root(BoxLayout):
         self.update_interval = 0.1
         self.graphs = []
         self.plots = []
+        self.checkboxes = []
         self.receiver = symbionic.GFDataReceiverSocket(stub=True)
         self.fake_data = FileDataStub()
         self.rawDataBox = []
-        self.gestureBox = []
+        self.gestureGraph = []
+        self.gestureCheckbox = []
         self.gestureModel = GestureModel(FakeModel(self.number_of_gestures), data_prepare=take_max_abs)
         #self.gestureModel.model = RandomForestModel()
         self.predictions = PredictionBuffer(self.number_of_gestures)
+        self.selected_gesture = str(0)
         self._popup = ObjectProperty(None)
         self.saving_method = save_raw_data
 
     def init_graphs(self):
-        self.rawDataBox = GraphBox(self.ids.raw_data_box,self.number_of_channels)
+        self.rawDataBox = GraphBox(self.ids.raw_data_box, self.number_of_channels)
         self.rawDataBox.init_graphs()
-        self.gestureBox = GraphBox(self.ids.gesture_box, self.number_of_gestures)
-        self.gestureBox.ylim = (-0.1,1.1)
-        self.gestureBox.init_graphs()
+        self.gestureGraph = GraphBox(self.ids.gesture_graph, self.number_of_gestures)
+        self.gestureGraph.ylim = (-0.1,1.1)
+        self.gestureGraph.init_graphs()
+
+
+    def init_checkbox(self):
+        self.gestureCheckbox = clsCheckBox(self, self.ids.gesture_checkbox, self.number_of_gestures, "gestures")
+        self.gestureCheckbox.init_checkboxes()
 
     def start(self):
         self.receiver.start()
@@ -126,7 +136,7 @@ class Root(BoxLayout):
 
     def update_prediction_graphs(self):
         predictions = self.predictions.get_predictions()
-        self.gestureBox.update_graphs(predictions)
+        self.gestureGraph.update_graphs(predictions)
 
     def dismiss_popup(self):
         self._popup.dismiss()
@@ -147,6 +157,29 @@ class Root(BoxLayout):
         self.saving_method(self.receiver,file_path)
         self.dismiss_popup()
 
+
+class clsCheckBox:
+    def __init__(self, Root, checkbox_id, number_of_checkboxes, checkbox_group):
+        self.Root = Root
+        self.checkbox_id = checkbox_id
+        self.number_of_checkboxes = number_of_checkboxes
+        self.checkbox_group = checkbox_group
+        self.checkboxes = []
+        self.ylim = (-150,150)
+
+    def init_checkboxes(self):
+        for g in range(self.number_of_checkboxes):
+            self.add_checkbox(self.checkbox_id)
+
+    def add_checkbox(self, box_id):
+        checkbox = CheckBox(group=self.checkbox_group)
+        checkbox.bind(active=self.on_checkbox_active)
+        self.checkboxes.append(checkbox)
+        box_id.add_widget(checkbox)
+
+    def on_checkbox_active(self, checkboxId, isActive):
+        if isActive:
+           self.Root.selected_gesture = str(self.checkboxes.index(checkboxId) + 1)
 
 class GraphBox:
     def __init__(self, box_id, number_of_graphs):
@@ -183,13 +216,12 @@ class SymbionicApp(App):
     def build(self):
         self.root = Builder.load_file("look.kv")
         self.root.init_graphs()
+        self.root.init_checkbox()
         return self.root
-
 
 Factory.register('Root', cls=Root)
 #Factory.register('LoadDialog', cls=LoadDialog)
 Factory.register('SaveDialog', cls=SaveDialog)
-
 
 if __name__ == "__main__":
     SymbionicApp().run()
