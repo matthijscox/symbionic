@@ -1,0 +1,3 @@
+OrientationData,StubData\OrientationData.txt,100
+GestureData,StubData\GestureData.txt,50
+ExtendedDeviceData,StubData\ExtendedDeviceData.txt,175
