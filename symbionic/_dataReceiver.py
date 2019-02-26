@@ -106,8 +106,8 @@ class GFDataHandler:
         self.currentPrediction = 0
         self.predictedGestures = []
 
-    def HandleOrientationData(self, f1,f2,f3,f4):
-        self.OrientationData = [f1,f2,f3,f4]
+    def HandleOrientationData(self, f1, f2, f3, f4):
+        self.OrientationData = [f1, f2, f3, f4]
 
     def HandleGestureData(self, data):
         self.GestureData = data
@@ -135,7 +135,7 @@ class GFDataHandler:
         self.sentPackages = self.totalPackages
         return self.latestPackages
 
-    def chain_all_packages(self,input):
+    def chain_all_packages(self, input):
         return list(chain.from_iterable(input))
 
     def get_latest_emg_data(self, packages=None, channels=8, demean=True):
@@ -150,25 +150,45 @@ class GFDataHandler:
             emg_data = emg_data - mean[:, np.newaxis]
         return emg_data
 
-    def get_device_data_for_prediction(self,prediction=0):
-        data_for_prediction = [x for (x,p) in zip(self.ExtendedDeviceData,self.predictedGestures) if p is prediction]
+    def get_device_data_for_prediction(self, prediction=0):
+        data_for_prediction = [x for (x, p) in zip(self.ExtendedDeviceData, self.predictedGestures) if p is prediction]
         return data_for_prediction
 
-    def get_chained_device_data_for_prediction(self,prediction=0):
+    def get_chained_device_data_for_prediction(self, prediction=0):
         data = self.get_device_data_for_prediction(prediction)
         return self.chain_all_packages(data)
 
-    def get_emg_data_object(self,n_gestures=6):
+    def get_emg_data_object(self, n_gestures=6):
         emg_data = symbionic.EmgData()
-        for g in range(1,n_gestures+1):
+        for g in range(1, n_gestures + 1):
             emg_values = self.get_chained_device_data_for_prediction(g)
             if emg_values is not None and len(emg_values) > 0:
-                emg_data.store_emg_values_in_gesture(emg_values,f'g{g}')
+                emg_data.store_emg_values_in_gesture(emg_values, f'g{g}')
         return emg_data
+
 
 
 def get_random_bytes(data_length):
     return bytearray(random.getrandbits(8) for _ in range(data_length))
+
+
+def get_stubbed_extended_device_data():
+    data = [
+            bytearray([132]),  # data length
+            chr(3),  # data type
+            chr(8),  # number of channels?
+            get_random_bytes  # ExtendedDeviceData package function
+            ]
+    return data
+
+
+def get_stubbed_gesture_data():
+    data = [
+            bytearray([1]),  # data length
+            chr(2),  # data type
+            chr(1)  # gesture 1 to 6, formatted as string
+            ]
+    return data
 
 
 class ClientSocketStub:
@@ -177,12 +197,9 @@ class ClientSocketStub:
         self._index = 0
         self._start_time = time.time()
         # pre-programmed data packages:
-        self._data = {0: bytearray([0]),
-                      1: bytearray([132]),  # data length
-                      2: chr(3),  # data type
-                      3: chr(8),  # number of channels?
-                      4: get_random_bytes   # ExtendedDeviceData package function
-                      }
+        self._data = [bytearray([0])] + \
+            get_stubbed_extended_device_data() + \
+            get_stubbed_gesture_data()
         # the time delay before a data package is being sent
         self.data_delay = 0.03
 
@@ -198,10 +215,11 @@ class ClientSocketStub:
     def close(self):
         return True
 
-    def recv(self,data_length):
+    def recv(self, data_length):
         # very simple stub, doesn't even use the data_length input
         data = self._data[self._index]
         if callable(data):
+            # if data is still a function, execute with the data_length:
             data = data(data_length)
         self.next()
         return data
