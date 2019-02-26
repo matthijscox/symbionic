@@ -167,7 +167,6 @@ class GFDataHandler:
         return emg_data
 
 
-
 def get_random_bytes(data_length):
     return bytearray(random.getrandbits(8) for _ in range(data_length))
 
@@ -186,7 +185,7 @@ def get_stubbed_gesture_data():
     data = [
             bytearray([1]),  # data length
             chr(2),  # data type
-            chr(1)  # gesture 1 to 6, formatted as string
+            chr(random.randint(1, 6))  # gesture 1 to 6, formatted as string
             ]
     return data
 
@@ -207,7 +206,7 @@ class ClientSocketStub:
         passed_time = time.time() - self._start_time
         if passed_time > self.data_delay:
             self._index += 1
-        if self._index == 5:
+        if self._index == len(self._data):
             # reset
             self._start_time = time.time()
             self._index = 0

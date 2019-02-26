@@ -14,6 +14,21 @@ def assert_data_length(data,expected_length):
     assert data_length == expected_length, f"expected data length of {expected_length}, but found {data_length}"
 
 
+class GFDataHandlerInjector:
+
+    def __init__(self):
+        self.GestureData = 0
+
+    def HandleOrientationData(self, f1, f2, f3, f4):
+        return None
+
+    def HandleGestureData(self, data):
+        self.GestureData = data
+
+    def HandleExtendedDeviceData(self, dataType, data):
+        return None
+
+
 def test_socket_stub():
     stub = symbionic._dataReceiver.ClientSocketStub()
     # turn off the stubbed data delay for the test
@@ -78,3 +93,15 @@ def test_data_handler_prediction_update():
     receiver.stop()
     assert receiver.dataHandler.predictedGestures[-1] is 2
     assert len(receiver.dataHandler.get_device_data_for_prediction(2))>1
+
+
+def test_data_handler_injection():
+    # using duck typing to overwrite the data handling
+    receiver = symbionic.GFDataReceiverSocket(stub=True)
+    receiver.dataHandler = GFDataHandlerInjector()
+    receiver.start()
+    receiver.client_socket.data_delay = 0.01
+    time.sleep(0.05)
+    receiver.stop()
+    assert receiver.dataHandler.GestureData is not 0
+
